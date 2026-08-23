@@ -21,7 +21,8 @@ When it finds one, it:
 1. Detects which provider the URL belongs to.
 2. Removes the raw URL from the description text.
 3. Adds a Jellyfin-style external-link button.
-4. Replaces the button text with the provider logo.
+4. Adds the same comma separator Jellyfin uses between external links.
+5. Replaces the button text with the provider logo.
 
 Example providers are already included for Newgrounds and YouTube.
 

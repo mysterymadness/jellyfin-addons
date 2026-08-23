@@ -22,6 +22,10 @@
         }
     }
 
+    function warn(...args) {
+        console.warn("[External Links]", ...args);
+    }
+
     function absoluteUrl(path) {
         return new URL(path, PROJECT_BASE).href;
     }
@@ -161,17 +165,24 @@
 
         if (configuredWidth) {
             link.style.setProperty("--provider-logo-width", numberToPx(configuredWidth, FALLBACK_LOGO_WIDTH));
+            log("Using configured logo width", provider.displayName, configuredWidth);
             return;
         }
 
         link.style.setProperty("--provider-logo-width", `${FALLBACK_LOGO_WIDTH}px`);
+        log("Temporarily using fallback logo width", provider.displayName, FALLBACK_LOGO_WIDTH);
         detectLogoWidth(assetUrl, height)
             .then((width) => {
                 link.style.setProperty("--provider-logo-width", `${width}px`);
                 log("Detected logo width", provider.displayName, width);
             })
             .catch((error) => {
-                log("Could not detect logo width", provider.displayName, error);
+                warn(
+                    "Using fallback logo width because automatic sizing failed.",
+                    provider.displayName,
+                    `${FALLBACK_LOGO_WIDTH}px`,
+                    error
+                );
             });
     }
 
@@ -220,6 +231,18 @@
         return link;
     }
 
+    function containerHasLinks(container) {
+        return Boolean(container.querySelector("a[href]"));
+    }
+
+    function appendProviderLink(container, link) {
+        if (containerHasLinks(container)) {
+            container.appendChild(document.createTextNode(", "));
+        }
+
+        container.appendChild(link);
+    }
+
     function addProviderLinks(root, links) {
         const container = findExternalLinksContainer(root);
 
@@ -228,7 +251,7 @@
                 continue;
             }
 
-            container.appendChild(createProviderLink(container, provider, url));
+            appendProviderLink(container, createProviderLink(container, provider, url));
             log("Added provider link", provider.displayName, url);
         }
     }
