@@ -261,7 +261,7 @@
         const description = findDescription(root);
 
         if (!description || description.getAttribute(PROCESSED_ATTR) === location.href) {
-            return;
+            return Boolean(description);
         }
 
         const links = collectProviderUrls(description);
@@ -274,23 +274,69 @@
         addProviderLinks(root, links);
         removeProviderUrlsFromText(description);
         description.setAttribute(PROCESSED_ATTR, location.href);
+        return true;
     }
 
     let pending = 0;
+    let observer = null;
+    let observerStopTimer = 0;
+    let currentHref = location.href;
 
     function scheduleProcess() {
         window.clearTimeout(pending);
-        pending = window.setTimeout(processDetailPage, 250);
+        pending = window.setTimeout(() => {
+            const finished = processDetailPage();
+
+            if (finished) {
+                stopWatchingPage();
+            }
+        }, 250);
     }
 
-    scheduleProcess();
+    function stopWatchingPage() {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
 
-    const observer = new MutationObserver(scheduleProcess);
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-    });
+        window.clearTimeout(observerStopTimer);
+        observerStopTimer = 0;
+    }
 
-    window.addEventListener("hashchange", scheduleProcess);
-    window.addEventListener("popstate", scheduleProcess);
+    function startWatchingPage() {
+        stopWatchingPage();
+        scheduleProcess();
+
+        observer = new MutationObserver(scheduleProcess);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+
+        observerStopTimer = window.setTimeout(() => {
+            stopWatchingPage();
+            log("Stopped page watcher after timeout.");
+        }, 10000);
+    }
+
+    function handleNavigation() {
+        if (currentHref === location.href) {
+            scheduleProcess();
+            return;
+        }
+
+        currentHref = location.href;
+        startWatchingPage();
+    }
+
+    startWatchingPage();
+
+    window.addEventListener("hashchange", handleNavigation);
+    window.addEventListener("popstate", handleNavigation);
+
+    window.setInterval(() => {
+        if (currentHref !== location.href) {
+            handleNavigation();
+        }
+    }, 1000);
 })();
