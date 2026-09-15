@@ -110,6 +110,12 @@
             select.addEventListener('mousedown', event => {
                 event.preventDefault();
                 event.stopPropagation();
+
+                if (activeSelect === select && activeMenu) {
+                    closeMenu();
+                    return;
+                }
+
                 openMenu(select);
             });
         });
